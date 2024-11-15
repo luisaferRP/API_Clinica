@@ -1,0 +1,104 @@
+@page "/user/edit/{id}"
+
+@using CurrieTechnologies.Razor.SweetAlert2;
+@using BlazorServerApp.Services; 
+@using MiApi.Models;
+
+@inject SweetAlertService Swal;
+@inject IUserServices UserServices;
+
+
+<h1>Editar mi usuario</h1>
+
+@if (user != null)
+{
+    <div>
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header text-center">
+                        <h4>Editar Usuario</h4>
+                    </div>
+                    <div class="card-body">
+                        <form @onsubmit="HandleSubmit">
+                            
+                            <div class="mb-3">
+                                <label for="name" class="form-label">Nombre</label>
+                                <input type="text" class="form-control" id="name" @bind="user.Name" placeholder="Ingrese su nombre" required />
+                            </div>
+                         
+                            <div class="mb-3">
+                                <label for="email" class="form-label">Correo Electrónico</label>
+                                <input type="email" class="form-control" id="email" @bind="user.Email" placeholder="Ingrese su correo electrónico" required />
+                            </div>
+
+                           
+                            <div class="mb-3">
+                                <label for="password" class="form-label">Contraseña</label>
+                                <input type="password" class="form-control" id="password" @bind="user.Password" placeholder="Ingrese su nueva contraseña" />
+                            </div>
+
+                          
+                            <div class="mb-3">
+                                <label for="confirmPassword" class="form-label">Confirmar Contraseña</label>
+                                <input type="password" class="form-control" id="confirmPassword" placeholder="Confirme su nueva contraseña" />
+                            </div>
+
+                          
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <p>Cargando...</p>
+}
+
+@code {
+    [Parameter] public string Id { get; set; } //por la url se envio este id
+    private User user;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Convertir Id a int
+        if (int.TryParse(Id, out int userId))
+        {
+            // Llamar al servicio para obtener el usuario por su Id
+            user = await UserServices.Buscar(userId);
+
+        }else{
+            
+            user = null;
+            Console.WriteLine("Error: El ID proporcionado no es válido.");
+        }
+    }
+
+    private async Task HandleSubmit()
+    {
+        var result = await Swal.FireAsync(new SweetAlertOptions
+        {
+            Title = "¿Estás seguro de editar el usuario?",
+            Icon = SweetAlertIcon.Warning,
+            ConfirmButtonText = "Si, editar",
+            CancelButtonText = "Cancelar",
+            ShowCancelButton = true
+        });
+
+        if(result.IsConfirmed)
+        {
+            var edit = await UserServices.Editar(user);
+            if(edit)
+            {
+                await Swal.FireAsync("Editado", "El usuario ha sido editado exitosamente", "success");
+            }else{
+                await Swal.FireAsync("Error", "Hubo un problema al editar el usuario", "error");
+            }
+        }
+    }
+}

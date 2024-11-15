@@ -1,0 +1,79 @@
+@page "/"
+
+@* @layout BlazorServerApp.Components.Layout *@
+
+@using BlazorServerApp.Models;
+@using Blazored.LocalStorage;
+@inject HttpClient https;
+@inject NavigationManager navManager;
+@inject ILocalStorageService localStorage;
+
+<div class="row mt-5">
+    <div class="col-lg-4 offset-lg-4 border p-4 bg-info p-2 text-dark bg-opacity-10">
+        <div class="mb-3 text-center">
+            <h3>LOGIN</h3>
+        </div>
+        <div class="mb-3 mt-5">
+            <form method="post" @formname="form1" Model="loginDTO" OnValidSubmit="ValidateLogin">
+                <div class="mb-3">
+                    <label for="email" class="form-label">Correo</label>
+                    <InputText id="email" class="form-control" @bind-Value="loginDTO.Email" />
+                </div>
+                <div class="mb-3">
+                    <label for="password" class="form-label">Contraseña</label>
+                    <InputText id="password" type="password" class="form-control" @bind-Value="loginDTO.Password" />
+                </div>
+                    <InputHidden name="__RequestVerificationToken" value="@AntiforgeryToken" />
+                    <button type="submit" class="btn btn-primary">Iniciar Sesión</button>
+            </form>
+
+            @if (!string.IsNullOrEmpty(MensajeError))
+            {
+                <div class="alert alert-danger mt-3">@MensajeError</div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private UserLoginofDTO loginDTO = new UserLoginofDTO();
+    private string MensajeError;
+
+     private string AntiforgeryToken;
+
+     protected override async Task OnInitializedAsync()
+    {
+        // Obtener el token antifalsificación desde el servidor
+        AntiforgeryToken = await https.GetStringAsync("/antiforgery-token");
+    }
+    private async Task ValidateLogin()
+    {
+        // Limpiar mensaje de error al intentar hacer login
+        MensajeError = string.Empty;
+
+        // Llamada a la API para autenticar al usuario
+        var response = await https.PostAsJsonAsync("/Login", loginDTO);
+
+        if (response.IsSuccessStatusCode)
+        {
+            var loginResponse = await response.Content.ReadFromJsonAsync<ResponseofAPI<string>>();
+
+            if (loginResponse != null && loginResponse.EsCorrecto)
+            {
+                // Guardar el token JWT
+                await localStorage.SetItemAsync("jwt_token", loginResponse.Valor);
+
+                // Redirigir a la página principal o a otra página después del login
+                navManager.NavigateTo("/Home");
+            }
+            else
+            {
+                MensajeError = loginResponse?.Mensaje ?? "Error al iniciar sesión.";
+            }
+        }
+        else
+        {
+            MensajeError = "Credenciales inválidas";
+        }
+    }
+}

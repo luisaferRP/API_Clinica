@@ -1,0 +1,92 @@
+@page "/usuarios"
+
+@using CurrieTechnologies.Razor.SweetAlert2;
+@using BlazorServerApp.Services; 
+@using MiApi.Models;
+
+@inject SweetAlertService Swal;
+@inject IUserServices UserServices;
+
+<h1>Usuarios</h1>
+
+<div>
+    <a class="btn btn-success btn-sm mb-3" href="users">Nuevo Usuario</a>
+
+    <table class="table table-striped table-hover">
+        <thead>
+            <tr>
+                <th cope="col">Id</th>
+                <th cope="col">Nombre</th>
+                <th cope="col">Email</th>
+                 <th cope="col">Rol</th>
+                <th cope="col"></th>
+            </tr>
+        </thead>
+
+        <tbody>
+        @if (users == null || !users.Any())
+        {
+            <tr>
+                <td colspan="5" align="center">No hay usuarios registrados</td>
+            </tr>
+        }
+        else
+        {
+            @foreach (var user in users)
+            {
+                <tr>
+                    <td>@user.Id</td>
+                    <td>@user.Name</td>
+                    <td>@user.Email</td>
+                    <td>@user.Rol</td>
+                    <td>
+                        <a class="btn btn-primary btn-sm" href="/user/edit/@user.Id">Editar</a>
+                        <button class="btn btn-danger btn-sm" @onclick="() => Eliminar(user.Id)">Eliminar</button>
+                    </td>
+                </tr>
+            }
+        }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    List<User>? users = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Cargamos la lista de usuarios al inicializar el componente
+        users = await UserServices.Lista();
+    }
+
+
+    private async Task Eliminar(int id)
+    {
+         var result = await Swal.FireAsync(new SweetAlertOptions
+        {
+            Title = "¿Estás seguro de eliminar el usuario?",
+            Text = "Una vez eliminado, no se puede recuperar",
+            Icon = SweetAlertIcon.Warning,
+            ConfirmButtonText = "Si, eliminar",
+            CancelButtonText = "Cancelar",
+            ShowCancelButton = true
+        });
+
+
+        if (result.IsConfirmed)
+        {
+            // Realizamos la eliminación del usuario y actualizamos la lista si es exitoso
+            var eliminado = await UserServices.Eliminar(id);
+            if (eliminado)
+            {
+                await Swal.FireAsync("Eliminado", "El usuario ha sido eliminado exitosamente", "success");
+                users = users.Where(e => e.Id != id).ToList();
+            }
+            else
+            {
+                await Swal.FireAsync("Error", "Hubo un problema al eliminar el usuario", "error");
+            }
+        }
+    }
+}
+

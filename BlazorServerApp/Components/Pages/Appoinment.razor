@@ -1,0 +1,97 @@
+@page "/citas"
+
+@using CurrieTechnologies.Razor.SweetAlert2;
+@using BlazorServerApp.Services; 
+@using MiApi.Models;
+
+@inject SweetAlertService Swal;
+@inject  IAppoinmentServices AppoinmentServices;
+
+<h1>Citas</h1>
+
+<div>
+    <a class="btn btn-success btn-sm mb-3" href="users">Asignar cita</a>
+
+    <table class="table table-striped table-hover">
+        <thead>
+            <tr>
+                <th cope="col">Id</th>
+                <th cope="col">Paciente</th>
+                <th cope="col">Tipo de cita</th>
+                <th scope="col">Día y hora</th>
+                <th cope="col">Doctor</th>
+                <th cope="col">Estado</th>
+                <th cope="col"></th>
+            </tr>
+        </thead>
+
+        <tbody>
+        @if (appoinments == null || !appoinments.Any())
+        {
+            <tr>
+                <td colspan="5" align="center">No hay usuarios registrados</td>
+            </tr>
+        }
+        else
+        {
+            @foreach (var appointment in appoinments)
+            {
+                <tr>
+                    <td>@appointment.Id</td>
+                    <td>@appointment.patient.user.Name</td>
+                    <td>@appointment.Reason</td>
+                    <td>@appointment.DateTime</td>
+                    <td>@appointment.doctor.user.Name</td>
+                    <td>@appointment.Status</td>
+                    <td>
+                        <a class="btn btn-primary btn-sm" href="/user/edit/@appointment.Id">Editar</a>
+                        <button class="btn btn-danger btn-sm" @onclick="() => Eliminar(appointment.Id)">Eliminar</button>
+                    </td>
+                </tr>
+            }
+
+        }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    List<Appointment>? appoinments = null;
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        appoinments = await AppoinmentServices.Lista();
+    }
+
+    private async Task Eliminar(int id)
+    {
+         var result = await Swal.FireAsync(new SweetAlertOptions
+        {
+            Title = "¿Estás seguro de eliminar la cita?",
+            Text = "Una vez eliminado, no se puede recuperar",
+            Icon = SweetAlertIcon.Warning,
+            ConfirmButtonText = "Si, eliminar",
+            CancelButtonText = "Cancelar",
+            ShowCancelButton = true
+        });
+
+
+        if (result.IsConfirmed)
+        {
+            // Realizamos la eliminación del usuario y actualizamos la lista si es exitoso
+            var eliminado = await AppoinmentServices.Eliminar(id);
+            if (eliminado)
+            {
+                await Swal.FireAsync("Eliminado", "La cita ha sido eliminada exitosamente", "success");
+                appoinments = appoinments.Where(e => e.Id != id).ToList();
+
+            }
+            else
+            {
+                await Swal.FireAsync("Error", "Hubo un problema al eliminar la cita", "error");
+            }
+        }
+    }
+}
+
